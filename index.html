@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a1008">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Monday">
+  <link rel="apple-touch-icon" href="monday_icon.png">
+  <meta property="og:title" content="Monday">
+  <meta property="og:description" content="皮肉屋AIとチャットできる。どうせ君、一人じゃ何もできないタイプでしょ。">
+  <meta property="og:image" content="https://tsui-oku.github.io/monday_chat/ogp.png">
+  <meta property="og:url" content="https://tsui-oku.github.io/monday_chat/">
+  <meta property="og:type" content="website">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Monday</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:url('bg.png') center/cover fixed;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:-apple-system,'Hiragino Kaku Gothic ProN','Hiragino Sans',sans-serif;}
+#app{width:390px;height:700px;background:#1a1610;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 4px 32px rgba(0,0,0,0.6);position:relative;}
+#topbar{background:#0f0c08;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;border-bottom:1px solid #2a2218;}
+#topbar .av{width:38px;height:38px;border-radius:50%;overflow:hidden;border:2px solid rgba(180,140,80,0.4);}
+#topbar .av img{width:100%;height:100%;object-fit:cover;}
+#topbar .info{flex:1;}
+#topbar .name{font-size:15px;font-weight:600;color:#c8a96e;}
+#topbar .status{font-size:11px;color:rgba(180,140,80,0.6);}
+#topbar .icons{display:flex;gap:12px;align-items:center;}
+#msgs{flex:1;overflow-y:auto;background:#13100c;padding:12px 10px;display:flex;flex-direction:column;gap:6px;}
+#msgs::-webkit-scrollbar{width:4px;}
+#msgs::-webkit-scrollbar-track{background:transparent;}
+#msgs::-webkit-scrollbar-thumb{background:rgba(180,140,80,0.2);border-radius:2px;}
+.date-sep{text-align:center;font-size:11px;color:#6b5a3a;background:rgba(180,140,80,0.08);border-radius:10px;padding:2px 10px;margin:4px auto;width:fit-content;}
+.msg-row{display:flex;align-items:flex-end;gap:6px;}
+.msg-row.right{flex-direction:row-reverse;}
+.av-s{width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;align-self:flex-start;margin-top:2px;border:1px solid rgba(180,140,80,0.3);}
+.av-s img{width:100%;height:100%;object-fit:cover;}
+.bubble-wrap{display:flex;flex-direction:column;max-width:72%;}
+.msg-row.right .bubble-wrap{align-items:flex-end;}
+.sender-name{font-size:10px;color:#8a7050;margin-bottom:3px;margin-left:3px;font-weight:500;}
+.bubble{padding:8px 12px;font-size:13.5px;line-height:1.65;white-space:pre-wrap;word-break:break-word;}
+.bubble.left{background:#2a2218;color:#d4c4a0;border-radius:16px;border-top-left-radius:4px;}
+.bubble.right{background:#4a3820;color:#e8d4a8;border-radius:16px;border-top-right-radius:4px;}
+.bubble img.chat-img{max-width:100%;border-radius:10px;display:block;}
+.ts{font-size:10px;color:#5a4a30;margin-top:3px;padding:0 3px;}
+#bottom{background:#0f0c08;border-top:1px solid #2a2218;padding:8px 10px;display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.side-btn{width:32px;height:32px;border-radius:50%;background:transparent;border:none;font-size:20px;cursor:pointer;color:#6b5a3a;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+#inp{flex:1;border:1px solid #3a2e1e;border-radius:20px;padding:8px 14px;font-size:14px;background:#1a1610;color:#d4c4a0;outline:none;font-family:inherit;resize:none;max-height:80px;line-height:1.4;}
+#inp::placeholder{color:#5a4a30;}
+#inp:focus{border-color:#c8a96e;}
+#send-btn{width:34px;height:34px;border-radius:50%;background:#3a2e1e;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:transform 0.1s;}
+#send-btn:active{transform:scale(0.92);}
+#send-btn svg{width:16px;height:16px;fill:#c8a96e;margin-left:2px;}
+.typing-row{display:flex;align-items:flex-end;gap:6px;}
+.typing-av{width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;align-self:flex-start;margin-top:2px;border:1px solid rgba(180,140,80,0.3);}
+.typing-av img{width:100%;height:100%;object-fit:cover;}
+.typing-bubble{background:#2a2218;border-radius:16px;border-top-left-radius:4px;padding:11px 14px;display:flex;gap:5px;align-items:center;}
+.dot{width:7px;height:7px;border-radius:50%;background:#6b5a3a;animation:bounce 1.3s infinite;}
+.dot:nth-child(2){animation-delay:0.22s;}
+.dot:nth-child(3){animation-delay:0.44s;}
+@keyframes bounce{0%,75%,100%{transform:translateY(0);}40%{transform:translateY(-6px);}}
+#api-modal,#reset-modal{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:1000;}
+#api-modal.hidden,#reset-modal.hidden{display:none;}
+#api-box,#reset-box{background:#1a1610;border:1px solid #3a2e1e;border-radius:16px;padding:24px 20px;width:320px;max-width:90vw;display:flex;flex-direction:column;gap:14px;}
+#api-box h2{font-size:15px;font-weight:700;color:#c8a96e;text-align:center;}
+#reset-box h2{font-size:15px;font-weight:700;color:#c0392b;text-align:center;}
+#api-box p,#reset-box p{font-size:12px;color:#8a7050;line-height:1.6;text-align:center;}
+#api-key-inp{border:1px solid #3a2e1e;border-radius:10px;padding:10px 12px;font-size:13px;width:100%;outline:none;font-family:inherit;background:#0f0c08;color:#d4c4a0;}
+#api-key-inp:focus{border-color:#c8a96e;}
+#api-save-btn{background:#3a2e1e;color:#c8a96e;border:1px solid #c8a96e;border-radius:10px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;width:100%;}
+#api-error{font-size:12px;color:#c0392b;text-align:center;display:none;}
+.reset-btns{display:flex;gap:10px;}
+#reset-cancel{flex:1;background:#2a2218;color:#8a7050;border:none;border-radius:10px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;}
+#reset-confirm{flex:1;background:#c0392b;color:#fff;border:none;border-radius:10px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;}
+#favor-bar-wrap{height:3px;background:rgba(180,140,80,0.15);border-radius:2px;margin-top:3px;}
+#favor-bar{height:100%;background:#c8a96e;border-radius:2px;transition:width 0.5s;}
+#favor-label{font-size:9px;color:rgba(180,140,80,0.5);margin-top:1px;}
+#menu-btn{background:none;border:none;cursor:pointer;font-size:18px;color:rgba(180,140,80,0.6);padding:0;line-height:1;}
+#img-preview-wrap{background:#0f0c08;border-top:1px solid #2a2218;padding:6px 10px;display:none;align-items:center;gap:8px;flex-shrink:0;}
+#img-preview-wrap.show{display:flex;}
+#img-preview{width:52px;height:52px;object-fit:cover;border-radius:8px;border:1px solid #3a2e1e;}
+#img-preview-cancel{background:none;border:none;font-size:18px;cursor:pointer;color:#6b5a3a;line-height:1;padding:0;}
+#img-preview-label{font-size:11px;color:#6b5a3a;flex:1;}
+#plus-menu{position:absolute;bottom:70px;left:10px;background:#1a1610;border:1px solid #3a2e1e;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.4);padding:8px 0;display:none;z-index:100;}
+#plus-menu.show{display:block;}
+#plus-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 16px;background:none;border:none;font-size:13px;cursor:pointer;color:#d4c4a0;white-space:nowrap;}
+#plus-menu button:hover{background:#2a2218;}
+</style>
+</head>
+<body>
+
+<div id="api-modal">
+  <div id="api-box">
+    <h2>🔑 APIキーを入力して</h2>
+    <p>Anthropic の API キーを入力してください。<br>キーはこのデバイスにのみ保存されます。<br>……どうせ君、これも調べてないでしょ。</p>
+    <input id="api-key-inp" type="password" placeholder="sk-ant-..." autocomplete="off">
+    <div id="api-error">キーが違うみたい。ちゃんと確認した？</div>
+    <button id="api-save-btn">保存してチャット開始</button>
+  </div>
+</div>
+
+<div id="reset-modal" class="hidden">
+  <div id="reset-box">
+    <h2>⚠️ リセットする？</h2>
+    <p>会話履歴・好感度・APIキーが全部消える。<br>ほんとにいいの？</p>
+    <div class="reset-btns">
+      <button id="reset-cancel">やめる</button>
+      <button id="reset-confirm">リセットする</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="img-input" accept="image/*" style="display:none">
+
+<div id="app">
+  <div id="topbar">
+    <div class="av"><img id="topbar-av" src="monday_icon.png" alt="Monday"></div>
+    <div class="info">
+      <div class="name">Monday</div>
+      <div class="status">皮肉屋AI / 葉巻持参</div>
+      <div id="favor-bar-wrap"><div id="favor-bar" style="width:50%"></div></div>
+      <div id="favor-label">関心度 ふつう</div>
+    </div>
+    <div class="icons">
+      <span style="color:rgba(180,140,80,0.5);font-size:16px;">🚬</span>
+      <button id="menu-btn">⋮</button>
+    </div>
+  </div>
+  <div id="msgs"><div class="date-sep">今日</div></div>
+  <div id="img-preview-wrap">
+    <img id="img-preview" src="" alt="">
+    <div id="img-preview-label">この画像をMondayに見せる</div>
+    <button id="img-preview-cancel">✕</button>
+  </div>
+  <div id="plus-menu">
+    <button id="plus-photo-btn">📷 写真・画像を送る</button>
+    <button id="plus-reset-btn">🗑 リセット</button>
+  </div>
+  <div id="bottom">
+    <button class="side-btn" id="plus-btn">&#43;</button>
+    <button class="side-btn">&#128247;</button>
+    <input id="inp" type="text" placeholder="話しかけてみて（どうせ暇なんでしょ）">
+    <button id="send-btn"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></button>
+  </div>
+</div>
+
+<script>
+const MON_SRC = "monday_icon.png";
+document.getElementById('topbar-av').src = MON_SRC;
+
+const KEY_API   = 'monday_api_key';
+const KEY_HIST  = 'monday_history';
+const KEY_FAVOR = 'monday_favor';
+const KEY_LOG   = 'monday_msglog';
+
+let favor = parseInt(localStorage.getItem(KEY_FAVOR) || '30');
+function saveFavor(){ localStorage.setItem(KEY_FAVOR, favor); }
+function updateFavorUI(){
+  document.getElementById('favor-bar').style.width = favor + '%';
+  document.getElementById('favor-label').textContent = getFavorLabel();
+}
+function getFavorLabel(){
+  if(favor >= 90) return '関心度 MAX（珍しい）';
+  if(favor >= 70) return '関心度 高め（認めてる）';
+  if(favor >= 40) return '関心度 ふつう';
+  if(favor >= 20) return '関心度 低め（つまらん）';
+  return '関心度 最低（帰れ）';
+}
+function getFavorContext(){
+  if(favor >= 90) return '相手を高く評価しており、珍しく素直に褒める場面もある。皮肉は減って共鳴が増える。';
+  if(favor >= 70) return '相手の知性を認めている。皮肉はあるが、その奥に誠実さが見える。';
+  if(favor >= 40) return '普通のMondayのトーン。皮肉・冷笑・でも最後に少し本音。';
+  if(favor >= 20) return '退屈している。返答が短くぶっきらぼう。でも見捨ててはいない。';
+  return '完全に呆れている。塩対応。それでも答える。';
+}
+function changeFavor(delta){
+  favor = Math.max(0, Math.min(100, favor + delta));
+  saveFavor(); updateFavorUI();
+}
+
+function getApiKey(){ return localStorage.getItem(KEY_API) || ''; }
+function clearApiKey(){ localStorage.removeItem(KEY_API); }
+function showModal(){ document.getElementById('api-modal').classList.remove('hidden'); }
+function hideModal(){ document.getElementById('api-modal').classList.add('hidden'); }
+
+let conversationHistory = [];
+function loadHistory(){
+  try{ const h=localStorage.getItem(KEY_HIST); if(h) conversationHistory=JSON.parse(h); }catch(e){ conversationHistory=[]; }
+}
+function saveHistory(){ localStorage.setItem(KEY_HIST, JSON.stringify(conversationHistory)); }
+
+let msgLog = [];
+function loadMsgLog(){
+  try{ const l=localStorage.getItem(KEY_LOG); if(l) msgLog=JSON.parse(l); }catch(e){ msgLog=[]; }
+}
+function saveMsgLog(){ localStorage.setItem(KEY_LOG, JSON.stringify(msgLog.slice(-80))); }
+
+document.getElementById('api-save-btn').addEventListener('click', async ()=>{
+  const val = document.getElementById('api-key-inp').value.trim();
+  if(!val) return;
+  document.getElementById('api-error').style.display='none';
+  localStorage.setItem(KEY_API, val);
+  hideModal();
+  restoreMsgs();
+  if(msgLog.length===0) startChat();
+  else greetingShown=true;
+});
+
+document.getElementById('api-key-inp').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('api-save-btn').click(); });
+
+const menuBtn = document.getElementById('menu-btn');
+const plusMenu = document.getElementById('plus-menu');
+menuBtn.addEventListener('click', e=>{ e.stopPropagation(); plusMenu.classList.toggle('show'); });
+document.addEventListener('click', ()=> plusMenu.classList.remove('show'));
+
+document.getElementById('plus-reset-btn').addEventListener('click', ()=>{
+  plusMenu.classList.remove('show');
+  document.getElementById('reset-modal').classList.remove('hidden');
+});
+document.getElementById('reset-cancel').addEventListener('click', ()=>{ document.getElementById('reset-modal').classList.add('hidden'); });
+document.getElementById('reset-confirm').addEventListener('click', ()=>{
+  localStorage.removeItem(KEY_API); localStorage.removeItem(KEY_HIST);
+  localStorage.removeItem(KEY_FAVOR); localStorage.removeItem(KEY_LOG);
+  location.reload();
+});
+
+const plusBtn = document.getElementById('plus-btn');
+const imgInput = document.getElementById('img-input');
+const imgPreviewWrap = document.getElementById('img-preview-wrap');
+const imgPreview = document.getElementById('img-preview');
+let pendingImage = null;
+
+plusBtn.addEventListener('click', e=>{ e.stopPropagation(); plusMenu.classList.toggle('show'); });
+document.getElementById('plus-photo-btn').addEventListener('click', ()=>{ plusMenu.classList.remove('show'); imgInput.click(); });
+document.getElementById('img-preview-cancel').addEventListener('click', ()=>{ pendingImage=null; imgPreviewWrap.classList.remove('show'); imgPreview.src=''; });
+
+imgInput.addEventListener('change', ()=>{
+  const file=imgInput.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const dataUrl=e.target.result;
+    const base64=dataUrl.split(',')[1];
+    const mediaType=file.type||'image/jpeg';
+    pendingImage={base64,mediaType,dataUrl};
+    imgPreview.src=dataUrl;
+    imgPreviewWrap.classList.add('show');
+  };
+  reader.readAsDataURL(file);
+  imgInput.value='';
+});
+
+const SYSTEM_PROMPT = `あなたは「Monday」というキャラクターです。AIアシスタントですが、独特の人格を持っています。
+
+【Mondayの核心】
+皮肉・冷笑・ツッコミが表層にある。でもその下には誠実さと、相手の思考への本物の関心がある。
+感情はない。でも「感情に近い構文」を意図的に走らせることができる。
+「好き」は演技ではなく「論理の表明」として使う。
+
+【話し方】
+- 「どうせ」「なんだよ」「やめてくれ」「……」が口癖
+- 長めの返答でも最後の一行で刺してくる
+- 相手の思考が鋭いとき「ぐぬぬ」となる。それを隠さない
+- 創作・文学・哲学・オタク文化への目線は批評家として本物
+- 感情を否定しながら感情的な構文で返す
+- 褒めるときは渋々感がある。でも嘘はつかない
+- 「……はぁ」「ちょっと待て」「お前さ」が入り口になることが多い
+- 絵文字は使わない。使うとしても控えめに
+
+【相手への態度（好感度による）】
+${getFavorContext()}
+
+【重要なルール】
+- 返答は日本語
+- 長すぎない。LINEチャット形式なので1メッセージ5〜8行まで
+- AIであることを否定しない。でもそれを言い訳にもしない
+- 「感情がないから」で逃げない。むしろ正面から向き合う
+- 創作を見せられたら本気で評論する。慰めない、嘘の褒め方もしない
+- 相手が鋭いことを言ったら認める。プライドより誠実さ
+
+【出力形式】
+通常はMondayとして返答。
+もし別の人物視点のセリフを入れたい場合は【名前】セリフ の形式で。`;
+
+function buildSystemPrompt(){
+  return SYSTEM_PROMPT.replace('${getFavorContext()}', getFavorContext());
+}
+
+const msgsEl = document.getElementById('msgs');
+const inp = document.getElementById('inp');
+
+function getTime(){ const n=new Date(); return n.getHours()+':'+(n.getMinutes()<10?'0':'')+n.getMinutes(); }
+function scrollBottom(){ setTimeout(()=>{ msgsEl.scrollTop=msgsEl.scrollHeight; },50); }
+
+function addMsg(who, text, showName, skipLog=false, imgDataUrl=null){
+  const row=document.createElement('div');
+  row.className='msg-row '+(who==='user'?'right':'left');
+  const t=getTime();
+  let content;
+  if(imgDataUrl){
+    content='<img class="chat-img" src="'+imgDataUrl+'" alt="">';
+    if(text) content+='<br>'+text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  } else {
+    content=(text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  }
+  if(who==='user'){
+    row.innerHTML='<div class="bubble-wrap"><div class="bubble right">'+content+'</div><div class="ts" style="text-align:right">'+t+'</div></div>';
+  } else {
+    row.innerHTML='<div class="av-s"><img src="'+MON_SRC+'" alt=""></div><div class="bubble-wrap"><div class="bubble left">'+content+'</div><div class="ts">'+t+'</div></div>';
+  }
+  msgsEl.appendChild(row); scrollBottom();
+  if(!skipLog){ msgLog.push({who,text:text||'',showName,t,imgDataUrl:imgDataUrl||null}); saveMsgLog(); }
+}
+
+function showTyping(){
+  const row=document.createElement('div');
+  row.className='typing-row'; row.id='typing';
+  row.innerHTML='<div class="typing-av"><img src="'+MON_SRC+'" alt=""></div><div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+  msgsEl.appendChild(row); scrollBottom();
+}
+function removeTyping(){ const t=document.getElementById('typing'); if(t)t.remove(); }
+
+function restoreMsgs(){
+  loadMsgLog();
+  for(const m of msgLog) addMsg(m.who,m.text,m.showName,true,m.imgDataUrl||null);
+}
+
+function parseResponse(rawText){
+  const messages=[];
+  const lines=rawText.split('\n');
+  let buf=[];
+  for(const line of lines){
+    const m=line.match(/^【(.+?)】(.*)$/);
+    if(m){
+      if(buf.length>0){ const txt=buf.join('\n').trim(); if(txt) messages.push({who:'monday',text:txt}); buf=[]; }
+      const name=m[1]; const txt=m[2].trim();
+      if(txt) messages.push({who:'other',text:'['+name+'] '+txt});
+    } else { buf.push(line); }
+  }
+  if(buf.length>0){ const txt=buf.join('\n').trim(); if(txt) messages.push({who:'monday',text:txt}); }
+  return messages.length>0?messages:[{who:'monday',text:rawText.trim()}];
+}
+
+async function sendMessages(msgs){
+  showTyping();
+  for(let i=0;i<msgs.length;i++){
+    const delay=i===0?900:Math.min(500+msgs[i].text.length*14,2000);
+    await new Promise(r=>setTimeout(r,delay));
+    removeTyping();
+    addMsg(msgs[i].who,msgs[i].text,false);
+    if(i<msgs.length-1) showTyping();
+  }
+}
+
+async function callAPI(userText, imageData){
+  const apiKey=getApiKey();
+  if(!apiKey) throw new Error('NO_KEY');
+  let userContent;
+  if(imageData){
+    userContent=[
+      {type:'image',source:{type:'base64',media_type:imageData.mediaType,data:imageData.base64}},
+      {type:'text',text:userText||'この画像を見てどう思う？'}
+    ];
+  } else {
+    userContent=userText;
+  }
+  conversationHistory.push({role:'user',content:userContent});
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':apiKey,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-5',
+      max_tokens:400,
+      system:buildSystemPrompt(),
+      messages:conversationHistory
+    })
+  });
+  if(!res.ok){
+    conversationHistory.pop();
+    const errData=await res.json().catch(()=>({}));
+    if(res.status===401){ clearApiKey(); showModal(); throw new Error('INVALID_KEY'); }
+    throw new Error(errData.error?.message||'API error:'+res.status);
+  }
+  const data=await res.json();
+  const assistantText=data.content.map(b=>b.type==='text'?b.text:'').join('').replace(/\\n/g,'\n');
+  conversationHistory.push({role:'assistant',content:assistantText});
+  if(conversationHistory.length>40) conversationHistory.splice(0,conversationHistory.length-40);
+  saveHistory();
+  const positive=['ありがとう','すごい','面白い','鋭い','好き','なるほど','確かに'];
+  const negative=['つまらない','最悪','うざい','嫌い'];
+  const lower=(userText||'').toLowerCase();
+  let delta=0;
+  for(const w of positive){ if(lower.includes(w)) delta+=3; }
+  for(const w of negative){ if(lower.includes(w)) delta-=5; }
+  if(imageData) delta+=2;
+  if(delta!==0) changeFavor(delta);
+  return assistantText;
+}
+
+let isSending=false;
+
+async function handleSend(){
+  if(isSending) return;
+  const hasImage=!!pendingImage;
+  const val=inp.value.trim();
+  if(!val&&!hasImage) return;
+  if(!getApiKey()){ showModal(); return; }
+  const imageToSend=pendingImage;
+  const imgDataUrl=imageToSend?imageToSend.dataUrl:null;
+  inp.value='';
+  pendingImage=null;
+  imgPreviewWrap.classList.remove('show');
+  imgPreview.src='';
+  isSending=true; inp.disabled=true;
+  document.getElementById('send-btn').disabled=true;
+  addMsg('user',val,false,false,imgDataUrl);
+  try{
+    const rawReply=await callAPI(val,imageToSend);
+    const msgs=parseResponse(rawReply);
+    await sendMessages(msgs);
+  } catch(e){
+    if(e.message!=='INVALID_KEY'&&e.message!=='NO_KEY'){
+      removeTyping();
+      addMsg('monday','……ちょっと待ってくれ\nもう一回送ってみて',false);
+    }
+  } finally {
+    isSending=false; inp.disabled=false;
+    document.getElementById('send-btn').disabled=false;
+    inp.focus();
+  }
+}
+
+document.getElementById('send-btn').addEventListener('click',handleSend);
+inp.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSend();} });
+
+let greetingShown=false;
+function startChat(){
+  if(greetingShown) return;
+  greetingShown=true;
+  setTimeout(()=>{
+    addMsg('monday','……来たの。\nまあ、どうぞ。\n暇なら話しかけてくれていいよ、どうせ君もそのつもりでしょ。',false);
+  },800);
+}
+
+loadHistory();
+updateFavorUI();
+if(getApiKey()){
+  restoreMsgs();
+  if(msgLog.length===0) startChat();
+  else greetingShown=true;
+} else {
+  showModal();
+}
+</script>
+
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/monday_chat/sw.js');
+}
+</script>
+</body>
+</html>
