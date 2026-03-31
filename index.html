@@ -84,6 +84,8 @@ body{background:url('bg.png') center/cover fixed;display:flex;justify-content:ce
 #plus-menu.show{display:block;}
 #plus-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 16px;background:none;border:none;font-size:13px;cursor:pointer;color:#d4c4a0;white-space:nowrap;}
 #plus-menu button:hover{background:#2a2218;}
+#app{visibility:hidden;}
+#app.ready{visibility:visible;}
 </style>
 </head>
 <body>
@@ -200,6 +202,7 @@ document.getElementById('api-save-btn').addEventListener('click', async ()=>{
   document.getElementById('api-error').style.display='none';
   localStorage.setItem(KEY_API, val);
   hideModal();
+  document.getElementById('app').classList.add('ready');
   restoreMsgs();
   if(msgLog.length===0) startChat();
   else greetingShown=true;
@@ -614,6 +617,7 @@ function startChat(){
 loadHistory();
 updateFavorUI();
 if(getApiKey()){
+  document.getElementById('app').classList.add('ready');
   restoreMsgs();
   if(msgLog.length===0) startChat();
   else greetingShown=true;
