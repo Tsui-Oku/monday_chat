@@ -1,0 +1,22 @@
+{
+  "name": "Monday",
+  "short_name": "Monday",
+  "description": "皮肉屋AIとチャットできる。どうせ暇なんでしょ。",
+  "start_url": "/monday_chat/",
+  "display": "standalone",
+  "background_color": "#0f0c08",
+  "theme_color": "#1a1008",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "monday_icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "monday_icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
